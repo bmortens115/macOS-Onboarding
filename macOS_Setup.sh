@@ -412,39 +412,74 @@ installomator_install_labels() {
 #  Tart – install latest binary from GitHub (not via brew)
 ###############################################################################
 tart_bootstrap() {
-  local url="https://github.com/cirruslabs/tart/releases/latest/download/tart.tar.gz"
-  local tmp_dir tarball install_dir tart_bin
-
-  tmp_dir="$(mktemp -d)"
-  tarball="$tmp_dir/tart.tar.gz"
-
-  # Choose install dir
-  install_dir="/usr/local/bin"
-  [[ $(uname -m) == "arm64" && -d /opt/homebrew/bin ]] && install_dir="/opt/homebrew/bin"
-
-  if command -v tart &>/dev/null; then
-    log_info "tart found → updating to latest…"
-  else
-    log_info "tart not found → installing latest…"
-  fi
-
-  ( cd "$tmp_dir" && curl -LO "$url" ) || { log_error "Failed to download tart."; rm -rf "$tmp_dir"; return 1; }
-  tar -xzf "$tarball" -C "$tmp_dir" || { log_error "Failed to extract tart."; rm -rf "$tmp_dir"; return 1; }
-
-  tart_bin="$(find "$tmp_dir" -maxdepth 2 -type f -name tart 2>/dev/null | head -n 1 || true)"
-  [[ -n "$tart_bin" ]] || { log_error "Could not locate tart binary."; rm -rf "$tmp_dir"; return 1; }
-  chmod +x "$tart_bin"
-
-  log_info "Installing tart → $install_dir/tart"
-  if [[ -w "$install_dir" ]]; then
-    install -m 0755 "$tart_bin" "$install_dir/tart"
-  else
-    sudo install -m 0755 "$tart_bin" "$install_dir/tart"
-  fi
-
-  rm -rf "$tmp_dir"
-  command -v tart &>/dev/null || { log_error "tart install finished but tart not in PATH."; return 1; }
-  log_success "tart installed → $(command -v tart)"
+	local url="https://github.com/cirruslabs/tart/releases/latest/download/tart.tar.gz"
+	local tmp_dir tarball install_dir tart_bin
+	
+	tmp_dir="$(mktemp -d)"
+	tarball="$tmp_dir/tart.tar.gz"
+	
+	# Install destination
+	install_dir="/usr/local/bin"
+	[[ $(uname -m) == "arm64" && -d /opt/homebrew/bin ]] && install_dir="/opt/homebrew/bin"
+	
+	if command -v tart &>/dev/null; then
+		log_info "tart found → updating to latest…"
+	else
+		log_info "tart not found → installing latest…"
+	fi
+	
+	log_info "Downloading: $url"
+	curl -fL --retry 3 --retry-delay 1 -o "$tarball" "$url" || {
+		log_error "Failed to download tart tarball."
+		rm -rf "$tmp_dir"
+		return 1
+	}
+	
+	log_info "Extracting tart.tar.gz…"
+	tar -xzf "$tarball" -C "$tmp_dir" || {
+		log_error "Failed to extract tart tarball."
+		rm -rf "$tmp_dir"
+		return 1
+	}
+	
+	# Try to locate the tart binary anywhere in the extracted archive
+	# (archive layout changes over time, so we search deeper)
+	tart_bin="$(find "$tmp_dir" -maxdepth 6 -type f -name tart 2>/dev/null | head -n 1 || true)"
+	
+	# If not found by name, try to detect by executable + "tart" signature
+	if [[ -z "$tart_bin" ]]; then
+		tart_bin="$(find "$tmp_dir" -maxdepth 6 -type f -perm -111 2>/dev/null | \
+			while read -r f; do
+				# Try running candidate with --version; pick first that works
+				"$f" --version >/dev/null 2>&1 && echo "$f" && break
+			done | head -n 1 || true)"
+	fi
+	
+	if [[ -z "$tart_bin" ]]; then
+		log_error "Could not locate tart binary after extraction."
+		log_info "Archive contents (top-level):"
+		ls -la "$tmp_dir" | sed 's/^/  /'
+		rm -rf "$tmp_dir"
+		return 1
+	fi
+	
+	chmod +x "$tart_bin"
+	
+	log_info "Installing tart → $install_dir/tart"
+	if [[ -w "$install_dir" ]]; then
+		install -m 0755 "$tart_bin" "$install_dir/tart"
+	else
+		sudo install -m 0755 "$tart_bin" "$install_dir/tart"
+	fi
+	
+	rm -rf "$tmp_dir"
+	
+	if command -v tart &>/dev/null; then
+		log_success "tart installed successfully → $(command -v tart)"
+	else
+		log_error "tart install finished, but tart is not in PATH."
+		return 1
+	fi
 }
 
 ###############################################################################
