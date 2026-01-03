@@ -1,6 +1,6 @@
 # macOS Onboarding (Terminal Setup)
 
-This repository contains a macOS onboarding script that bootstraps a new Mac with common tools and configuration.
+This repository contains a macOS onboarding script that sets up a new Mac with common tools and configurations for BFA Technologies.
 
 ✅ Script: `macOS_Setup.sh`  
 ✅ Run from Terminal  
