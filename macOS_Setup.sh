@@ -497,8 +497,13 @@ sudo_touchid_bootstrap() {
   local pam_file="/etc/pam.d/sudo"
   local touchid_line="auth       sufficient     pam_tid.so"
 
-  # No Touch ID hardware / PAM module? Skip gracefully.
-  if [[ ! -f /usr/lib/pam/pam_tid.so ]]; then
+  # Detect Touch ID PAM module (supports pam_tid.so, pam_tid.so.2, etc.)
+  local tid_matches
+  shopt -s nullglob
+  tid_matches=(/usr/lib/pam/pam_tid.so*)
+  shopt -u nullglob
+
+  if [[ ${#tid_matches[@]} -eq 0 ]]; then
     log_warning "Touch ID PAM module not found → skipping Touch ID for sudo."
     return 0
   fi
@@ -510,18 +515,27 @@ sudo_touchid_bootstrap() {
     return $?
   fi
 
-  [[ -f "$pam_file" ]] || { log_error "PAM file not found: $pam_file"; return 1; }
+  # Sanity check
+  if [[ ! -f "$pam_file" ]]; then
+    log_error "PAM file not found: $pam_file"
+    return 1
+  fi
 
+  # If already enabled, no-op
   if grep -qE '^\s*auth\s+sufficient\s+pam_tid\.so\s*$' "$pam_file"; then
     log_info "Touch ID for sudo already enabled → nothing to do."
     return 0
   fi
 
+  # Backup
   local backup tmp
   backup="${pam_file}.bak.$(date +%Y%m%d%H%M%S)"
   cp -p "$pam_file" "$backup"
   log_info "Backup created: $backup"
 
+  log_info "Adding Touch ID auth line to sudo PAM config…"
+
+  # Insert after leading comments/blank lines at top of file
   tmp="$(mktemp)"
   awk -v line="$touchid_line" '
     BEGIN { inserted=0 }
