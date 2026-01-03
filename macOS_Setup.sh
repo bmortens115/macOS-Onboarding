@@ -436,6 +436,8 @@ dock_setup() {
       log_info "⚠️ Skipping (not found): $app_name → $app_path"
     fi
   done
+
+  sudo -u "$console_user" "$dockutil_bin" --add "$user_home"/Downloads --view grid --no-restart "$user_home"
   
   log_info "Restarting Dock to apply changes…"
   killall Dock >/dev/null 2>&1 || true
