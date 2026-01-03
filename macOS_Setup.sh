@@ -170,7 +170,6 @@ APPS=(
   "pkgconf:formula"
   "pyenv:formula"
   "readline:formula"
-  "tart:formula"
   "terraform:formula"
   "xmlstarlet:formula"
   "mas:formula"
