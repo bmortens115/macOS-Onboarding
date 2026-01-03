@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ###############################################################################
-#  Mac Setup – Preferences, Homebrew, MAS apps, Installomator, ohmyzsh
+#  Mac Bootstrap – Preferences, Homebrew, MAS apps, Installomator, ohmyzsh
 #  Works with the stock /bin/bash 3.2 on macOS
 #  (c) 2026 Mort • MIT License
 ###############################################################################
@@ -64,41 +64,54 @@ welcome() {
 configure_system() {
   # https://macos-defaults.com
   log_info "Configuring System Preferences…"
-  defaults write com.apple.dock orientation -string bottom
-  defaults write com.apple.dock autohide -bool true
-  defaults write com.apple.dock "show-recents" -bool "false"
-  defaults write com.apple.Safari "ShowFullURLInSmartSearchField" -bool "true"
-  defaults write com.apple.universalaccess "showWindowTitlebarIcons" -bool "true"
-  defaults write com.apple.finder "ShowPathbar" -bool "true"
-  defaults write NSGlobalDomain "AppleShowAllExtensions" -bool "true"
-  defaults write com.apple.TimeMachine "DoNotOfferNewDisksForBackup" -bool "true"
-  defaults write com.apple.dock "mru-spaces" -bool "false"
-  defaults write com.apple.finder "FXRemoveOldTrashItems" -bool "true"
-  defaults write com.apple.dock "mru-spaces" -bool "false"
+  ###
+  # Dock
+  ###
+  defaults write com.apple.dock orientation -string bottom            # Sets Dock position to the bottom of the screen
+  defaults write com.apple.dock autohide -bool true                  # Automatically hides/shows the Dock
+  defaults write com.apple.dock show-recents -bool false             # Disables "Show recent applications" in the Dock
+  defaults write com.apple.dock mru-spaces -bool false               # Prevents macOS from automatically reordering Spaces based on most recent use
   
-  #"Expanding the save panel by default"
-  defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
-  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
-  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
+  ###
+  # Safari
+  ###
+  defaults write com.apple.Safari ShowFullURLInSmartSearchField -bool true   # Shows the full URL in Safari’s address bar (instead of truncating it)
   
-  #"Allow text selection in Quick Look"
-  defaults write com.apple.finder QLEnableTextSelection -bool TRUE
+  ###
+  # Accessibility / UI
+  ###
+  defaults write com.apple.universalaccess showWindowTitlebarIcons -bool true # Shows icons in window title bars (where supported)
   
-  #"Showing all filename extensions in Finder by default"
-  defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+  ###
+  # Finder
+  ###
+  defaults write com.apple.finder ShowPathbar -bool true              # Shows the path bar at the bottom of Finder windows
+  defaults write com.apple.finder ShowStatusBar -bool true            # Shows the status bar at the bottom of Finder windows
+  defaults write com.apple.finder FXPreferredGroupBy -string Kind     # Groups Finder items by Kind by default
+  defaults write com.apple.finder FXRemoveOldTrashItems -bool true    # Automatically removes old items from Trash (Finder-managed cleanup)
+  defaults write com.apple.finder QLEnableTextSelection -bool true    # Enables text selection in Quick Look
+  defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false # Disables the warning when changing a file extension
+  defaults write com.apple.finder FXPreferredViewStyle -string Clmv   # Sets Finder default view style to Column View
   
-  #"Disabling the warning when changing a file extension"
-  defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+  ###
+  # Global (System-wide)
+  ###
+  defaults write NSGlobalDomain AppleShowAllExtensions -bool true     # Shows all file extensions in Finder and across macOS
+  defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true # Expands the Save dialog by default
+  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true   # Expands the Print dialog by default (legacy key)
+  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true  # Expands the Print dialog by default (modern key)
+  defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false # Disables smart quotes (helpful for coding)
+  defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false  # Disables smart dashes (helpful for coding)
   
-  #"Use column view in all Finder windows by default"
-  defaults write com.apple.finder FXPreferredViewStyle Clmv
+  ###
+  # Time Machine
+  ###
+  defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true # Prevents Time Machine from prompting to use new disks for backup
   
-  #"Avoiding the creation of .DS_Store files on network volumes"
-  defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
-  
-  #"Disable smart quotes and smart dashes as they are annoying when typing code"
-  defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
-  defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
+  ###
+  # Filesystem / Desktop Services
+  ###
+  defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true # Prevents .DS_Store creation on network volumes
 
   # https://dev.to/darrinndeal/setting-mac-hot-corners-in-the-terminal-3de
 
@@ -129,6 +142,7 @@ brew_bootstrap() {
 APPS=(
   # Casks
   "alfred:cask"
+  "arc:cask"
   "bbedit:cask"
   "bettertouchtool:cask"
   "coderunner:cask"
