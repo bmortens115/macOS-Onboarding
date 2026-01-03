@@ -184,6 +184,7 @@ APPS=(
   "terraform:formula"
   "xmlstarlet:formula"
   "mas:formula"
+  "dockutil:formula"
 )
 
 MAS_APPS=(
@@ -206,6 +207,22 @@ INSTALLOMATOR_APPS=(
   "jamfmigrator"
   "Prune"
   "jamfpppcutility"
+)
+
+DOCK_APPS=(
+  "/Applications/Microsoft Outlook.app|Microsoft Outlook"
+  "/Applications/Daylite.app|Daylite"
+  "/Applications/Slack.app|Slack"
+  "/Applications/ChatGPT.app|ChatGPT"
+  "/Applications/Arc.app|Arc"
+  "/Applications/Photos.app|Photos"
+  "/Applications/Messages.app|Messages"
+  "/Applications/iTerm.app|iTerm"
+  "/Applications/Antigravity.app|Antigravity"
+  "/Applications/Visual Studio Code.app|Visual Studio Code"
+  "/Applications/CodeRunner.app|CodeRunner"
+  "/Applications/Notes.app|Notes"
+  "/Applications/Reminders.app|Reminders"
 )
 
 ###############################################################################
@@ -376,6 +393,67 @@ installomator_install_labels() {
 }
 
 ###############################################################################
+#  Setting the Dock
+###############################################################################
+
+dock_setup() {
+  local console_user
+  console_user="$(stat -f%Su /dev/console)"
+  
+  local user_home
+  user_home="$(dscl . -read /Users/"$console_user" NFSHomeDirectory 2>/dev/null | awk '{print $2}')"
+  
+  local dockutil_bin
+  dockutil_bin="$(command -v dockutil 2>/dev/null || true)"
+  
+  # Sanity checks
+  if [[ -z "$dockutil_bin" ]]; then
+    log_info "dockutil not found in PATH → aborting."
+    return 1
+  fi
+  if [[ -z "$console_user" || "$console_user" == "root" ]]; then
+    log_info "No GUI user logged in → cannot set Dock."
+    return 1
+  fi
+  if [[ -z "$user_home" || ! -d "$user_home" ]]; then
+    log_info "Could not determine home directory for $console_user → aborting."
+    return 1
+  fi
+  if [[ ${#DOCK_APPS[@]} -eq 0 ]]; then
+    log_info "DOCK_APPS is empty or not defined → nothing to do."
+    return 0
+  fi
+  
+  # If the function is re-run with sudo, we must preserve DOCK_APPS
+  if [[ $EUID -ne 0 ]]; then
+    log_info "Not running as root → re-running with sudo…"
+    sudo bash -c "$(declare -p DOCK_APPS; declare -f log_info dock_bootstrap_from_list); dock_bootstrap_from_list"
+    return $?
+  fi
+  
+  log_info "Configuring Dock for user: $console_user"
+  log_info "Clearing existing Dock items…"
+  sudo -u "$console_user" "$dockutil_bin" --remove all --no-restart "$user_home"
+  
+  for entry in "${DOCK_APPS[@]}"; do
+    local app_path="${entry%%|*}"
+    local app_name="${entry#*|}"
+    
+    if [[ -d "$app_path" ]]; then
+      log_info "Adding: $app_name"
+      sudo -u "$console_user" "$dockutil_bin" --add "$app_path" --no-restart "$user_home"
+    else
+      log_info "⚠️ Skipping (not found): $app_name → $app_path"
+    fi
+  done
+  
+  log_info "Restarting Dock to apply changes…"
+  killall Dock >/dev/null 2>&1 || true
+  
+  log_info "Dock configured successfully."
+}
+
+###############################################################################
 #  Enabling touchID for sudo
 ###############################################################################
 
@@ -495,9 +573,10 @@ main() {
   log_info "Installing Mac App Store apps…"; newline_below_bar
   install_mas_items
   newline_below_bar
-  log_info "Installing Installomator and installing labels": newline_below_bar
+  log_info "Installing Installomator and installing labels and setting up the dock": newline_below_bar
   installomator_bootstrap
   installomator_install_labels
+  dock_setup
   log_info "Settign up TouchID for sudo and ohmyzsh": newline_below_bar
   sudo_touchid_bootstrap
   ohmyzsh_bootstrap
