@@ -193,7 +193,6 @@ MAS_APPS=(
 INSTALLOMATOR_APPS=(
   "jamfconnectconfiguration"
   "jamfcpr"
-  "jamfmigrator"
   "Prune"
   "jamfpppcutility"
 )
