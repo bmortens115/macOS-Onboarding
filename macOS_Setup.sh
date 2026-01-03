@@ -1,112 +1,108 @@
 #!/usr/bin/env bash
 ###############################################################################
-#  Mac Bootstrap – Preferences, Homebrew, MAS apps, Installomator, ohmyzsh
-#  Works with the stock /bin/bash 3.2 on macOS
+#  Mac Bootstrap – Preferences, Homebrew, MAS apps, Installomator, Oh My Zsh
+#  Compatible with /bin/bash 3.2 on macOS
 #  (c) 2026 Mort • MIT License
 ###############################################################################
 
 ###############################################################################
-#  Colours / log helpers
+#  Colors + logging helpers
 ###############################################################################
 GREEN=$'\033[0;32m'; BLUE=$'\033[0;34m'
-RED=$'\033[0;31m';   YELLOW=$'\033[1;33m'; NC=$'\033[0m'; BOLD=$'\033[1m'
+RED=$'\033[0;31m';   YELLOW=$'\033[1;33m'
+NC=$'\033[0m';       BOLD=$'\033[1m'
 
-log_info()    { printf '%sℹ️  %s%s\n'  "$BLUE"  "$1" "$NC"; }
-log_success() { printf '%s✅ %s%s\n'  "$GREEN" "$1" "$NC"; }
-log_warning() { printf '%s⚠️  %s%s\n' "$YELLOW" "$1" "$NC"; }
-log_error()   { printf '%s❌ %s%s\n'  "$RED"   "$1" "$NC"; }
+log_info()    { printf '%sℹ️  %s%s\n'  "$BLUE"   "$1" "$NC"; }
+log_success() { printf '%s✅ %s%s\n'   "$GREEN"  "$1" "$NC"; }
+log_warning() { printf '%s⚠️  %s%s\n'  "$YELLOW" "$1" "$NC"; }
+log_error()   { printf '%s❌ %s%s\n'   "$RED"    "$1" "$NC"; }
 
 ###############################################################################
-#  Robust shell behaviour & cleanup
+#  Robust shell behavior + cleanup
 ###############################################################################
 set -Eeuo pipefail
 
 cleanup() {
-  tput cnorm || true
+  # Restore cursor visibility (if hidden by any future UX changes)
+  tput cnorm 2>/dev/null || true
 }
 trap cleanup EXIT
 trap 'log_error "Interrupted"; exit 1' INT HUP TERM
 trap 'log_error "Line $LINENO (exit $?) – $BASH_COMMAND"; exit 1' ERR
 
 ###############################################################################
-#  Progress-bar helpers
+#  Progress-bar helpers (simple text progress for long installs)
 ###############################################################################
 BAR_W=30
-show_bar() {                   # no trailing newline
+
+show_bar() {  # usage: show_bar <pct> <message>  (no trailing newline)
   local pct=$1 msg=$2
   local done=$(( BAR_W * pct / 100 ))
   local todo=$(( BAR_W - done ))
+
   printf '\r\033[K%s┃%s' "$BLUE" "$NC"
   printf '%*s' "$done" '' | tr ' ' '█'
   printf '%*s' "$todo" '' | tr ' ' '░'
   printf '%s┃ %3d%% %s%s' "$BLUE" "$pct" "$msg" "$NC"
 }
+
 newline_below_bar() { printf '\n'; }
 
 ###############################################################################
-#  Welcome
+#  Welcome / preflight
 ###############################################################################
 welcome() {
   echo "======================================================"
-  log_info   "🎯  Mac Setup Script – Preferences & Apps"
+  log_info "🎯  Mac Setup Script – Preferences & Apps"
   echo "======================================================"
   log_warning "You'll be prompted for your password when needed."
-  echo "1. Sign in to the Mac App Store"
-  echo "2. Review this script"
-  echo "3. Ensure a stable internet connection"
+  echo "1) Sign in to the Mac App Store"
+  echo "2) Review this script (recommended)"
+  echo "3) Ensure a stable internet connection"
   echo
-  read -p "Press RETURN to continue or CTRL-C to quit…"
+  read -r -p "Press RETURN to continue or CTRL-C to quit…"
+  echo
 }
 
 ###############################################################################
-#  Preferences (abridged)
+#  Preferences (macOS defaults)
 ###############################################################################
 configure_system() {
-  # https://macos-defaults.com
+  # Helpful reference: https://macos-defaults.com
   log_info "Configuring System Preferences…"
-  ###
-  # Dock
-  ###
-  defaults write com.apple.dock orientation -string bottom            # Sets Dock position to the bottom of the screen
-  defaults write com.apple.dock autohide -bool true                  # Automatically hides/shows the Dock
-  defaults write com.apple.dock show-recents -bool false             # Disables "Show recent applications" in the Dock
-  defaults write com.apple.dock mru-spaces -bool false               # Prevents macOS from automatically reordering Spaces based on most recent use
-  
-  ###
-  # Finder
-  ###
-  defaults write com.apple.finder ShowPathbar -bool true              # Shows the path bar at the bottom of Finder windows
-  defaults write com.apple.finder ShowStatusBar -bool true            # Shows the status bar at the bottom of Finder windows
-  defaults write com.apple.finder FXPreferredGroupBy -string Kind     # Groups Finder items by Kind by default
-  defaults write com.apple.finder FXRemoveOldTrashItems -bool true    # Automatically removes old items from Trash (Finder-managed cleanup)
-  defaults write com.apple.finder QLEnableTextSelection -bool true    # Enables text selection in Quick Look
-  defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false # Disables the warning when changing a file extension
-  defaults write com.apple.finder FXPreferredViewStyle -string Clmv   # Sets Finder default view style to Column View
-  
-  ###
-  # Global (System-wide)
-  ###
-  defaults write NSGlobalDomain AppleShowAllExtensions -bool true     # Shows all file extensions in Finder and across macOS
-  defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true # Expands the Save dialog by default
-  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true   # Expands the Print dialog by default (legacy key)
-  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true  # Expands the Print dialog by default (modern key)
-  defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false # Disables smart quotes (helpful for coding)
-  defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false  # Disables smart dashes (helpful for coding)
-  
-  ###
-  # Time Machine
-  ###
-  defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true # Prevents Time Machine from prompting to use new disks for backup
-  
-  ###
-  # Filesystem / Desktop Services
-  ###
-  defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true # Prevents .DS_Store creation on network volumes
 
-  # https://dev.to/darrinndeal/setting-mac-hot-corners-in-the-terminal-3de
+  # --- Dock ---
+  defaults write com.apple.dock orientation -string bottom            # Dock position: bottom
+  defaults write com.apple.dock autohide -bool true                  # Dock autohide: enabled
+  defaults write com.apple.dock show-recents -bool false             # Dock: hide recent apps
+  defaults write com.apple.dock mru-spaces -bool false               # Spaces: do not auto-reorder
 
+  # --- Finder ---
+  defaults write com.apple.finder ShowPathbar -bool true             # Finder: show path bar
+  defaults write com.apple.finder ShowStatusBar -bool true           # Finder: show status bar
+  defaults write com.apple.finder FXPreferredGroupBy -string Kind    # Finder: group by Kind
+  defaults write com.apple.finder FXRemoveOldTrashItems -bool true   # Finder: auto-remove old Trash items
+  defaults write com.apple.finder QLEnableTextSelection -bool true   # Quick Look: allow text selection
+  defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false # Finder: no extension warning
+  defaults write com.apple.finder FXPreferredViewStyle -string Clmv  # Finder: column view default
+
+  # --- Global ---
+  defaults write NSGlobalDomain AppleShowAllExtensions -bool true    # Show all file extensions
+  defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true # Expand save panel
+  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true   # Expand print panel (legacy)
+  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true  # Expand print panel (modern)
+  defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false # Disable smart quotes
+  defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false  # Disable smart dashes
+
+  # --- Time Machine ---
+  defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true # No new-disk prompts
+
+  # --- Filesystem ---
+  defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true # No .DS_Store on network
+
+  # Apply immediately where possible
   killall Dock Finder SystemUIServer 2>/dev/null || true
-  log_success "System Preferences applied"
+  log_success "System Preferences applied."
 }
 
 ###############################################################################
@@ -118,19 +114,25 @@ brew_bootstrap() {
     bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   else
     log_info "Homebrew found → updating & upgrading…"
-    brew update; brew upgrade; brew cleanup
+    brew update
+    brew upgrade
+    brew cleanup
   fi
-  [[ $(uname -m) == arm64 ]] &&
-    { eval "$(/opt/homebrew/bin/brew shellenv)";
-      grep -q "/opt/homebrew" ~/.zprofile 2>/dev/null ||
-        echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile; }
+
+  # Ensure brew works for Apple Silicon shells in future sessions
+  if [[ $(uname -m) == arm64 ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    grep -q "/opt/homebrew" ~/.zprofile 2>/dev/null || \
+      echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+  fi
 }
 
 ###############################################################################
-#  Lists
+#  Package Lists
+#  APPS format: "name:kind[:flag]" where kind is cask|formula
 ###############################################################################
 APPS=(
-  # Casks
+  # --- Casks ---
   "alfred:cask"
   "arc:cask"
   "bbedit:cask"
@@ -154,7 +156,7 @@ APPS=(
   "visual-studio-code:cask"
   "windows-app:cask"
 
-  # Formula
+  # --- Formulae ---
   "autoconf:formula"
   "bat:formula"
   "ca-certificates:formula"
@@ -197,7 +199,9 @@ INSTALLOMATOR_APPS=(
   "jamfpppcutility"
 )
 
+# Dock items (path|label). Add Finder explicitly if you want it first.
 DOCK_APPS=(
+  "/System/Library/CoreServices/Finder.app|Finder"
   "/Applications/Microsoft Outlook.app|Microsoft Outlook"
   "/Applications/Daylite.app|Daylite"
   "/Applications/Slack.app|Slack"
@@ -214,39 +218,52 @@ DOCK_APPS=(
 )
 
 ###############################################################################
-#  Portable helper – fill array with command output (no mapfile needed)
+#  Utility: fill an array with command output (bash 3.2 compatible)
+#  cmd_to_array <array_name> "<command string>"
 ###############################################################################
-cmd_to_array() {                                 # $1 = array-name  $2 = cmd…
-  local _line
-  eval "$1=()"
-  while IFS= read -r _line; do
-    eval "$1+=(\"\$_line\")"
-  done < <(eval "$2")
+cmd_to_array() {
+  local arr_name=$1 cmd=$2 line
+  eval "$arr_name=()"
+  while IFS= read -r line; do
+    eval "$arr_name+=(\"\$line\")"
+  done < <(eval "$cmd")
 }
 
 ###############################################################################
-#  Install Brew items (skip already installed)
+#  Install Brew items (skips already installed)
 ###############################################################################
 install_brew_items() {
-  INST_FORMULAE=()
-  INST_CASKS=()
+  log_info "Installing Homebrew apps…"
+
+  local INST_FORMULAE=()
+  local INST_CASKS=()
   cmd_to_array INST_FORMULAE "brew list --formula"
   cmd_to_array INST_CASKS    "brew list --cask 2>/dev/null || true"
 
-  local total=${#APPS[@]} current=0 kind name pct
+  local total=${#APPS[@]} current=0 pct name kind flag
+
   show_bar 0 "starting…"; newline_below_bar
   for entry in "${APPS[@]}"; do
-    current=$((current+1)); pct=$(( current * 100 / total ))
+    current=$((current+1))
+    pct=$(( current * 100 / total ))
+
+    # Parse "name:kind[:flag]"
     IFS=':' read -r name kind flag <<< "$entry"
 
-    if [[ $kind == cask ]] && [[ " ${INST_CASKS[@]-} " == *" $name "* ]] ||
-       [[ $kind == formula ]] && [[ " ${INST_FORMULAE[@]-} " == *" $name "* ]]; then
-      show_bar "$pct" "✓ already installed $name"; newline_below_bar; continue
+    # Skip already installed
+    if [[ $kind == cask ]] && [[ " ${INST_CASKS[*]-} " == *" $name "* ]]; then
+      show_bar "$pct" "✓ already installed $name"; newline_below_bar
+      continue
+    fi
+    if [[ $kind == formula ]] && [[ " ${INST_FORMULAE[*]-} " == *" $name "* ]]; then
+      show_bar "$pct" "✓ already installed $name"; newline_below_bar
+      continue
     fi
 
-    show_bar "$pct" "↓ $name"; newline_below_bar
+    show_bar "$pct" "↓ installing $name"; newline_below_bar
+
     if [[ $kind == cask ]]; then
-      if [[ $flag == "no-quarantine" ]]; then
+      if [[ ${flag:-} == "no-quarantine" ]]; then
         brew install --cask --no-quarantine "$name"
       else
         brew install --cask "$name"
@@ -254,297 +271,312 @@ install_brew_items() {
     else
       brew install "$name"
     fi
-    show_bar "$pct" "✔︎ $name"; newline_below_bar
+
+    show_bar "$pct" "✔︎ installed $name"; newline_below_bar
   done
-  brew upgrade; brew cleanup
+
+  brew upgrade
+  brew cleanup
+  log_success "Homebrew installs complete."
 }
 
 ###############################################################################
-#  Install MAS items – tolerant of the "command not supported" issue
+#  Install Mac App Store items (MAS)
 ###############################################################################
 install_mas_items() {
-  # make sure mas exists
+  log_info "Installing Mac App Store apps…"
+
   command -v mas >/dev/null || brew install mas
 
-  # try to capture the list of IDs already on the machine
+  # Try to read installed list; on newer macOS this can fail if MAS isn't signed in
+  local INST_IDS=()
   if mas list 1>/tmp/mas_installed 2>/dev/null; then
-    # success → build INST_IDS array from the tmp file
     INST_IDS=($(awk '{print $1}' /tmp/mas_installed))
   else
-    # macOS 14+ (or similar) where mas can't read the account
-    INST_IDS=()   # pretend nothing is installed
     log_warning "Cannot read App Store account status; installs may prompt or fail."
   fi
   rm -f /tmp/mas_installed
 
-  local total=${#MAS_APPS[@]} current=0 id name pct
+  local total=${#MAS_APPS[@]} current=0 pct id name
+
   show_bar 0 "starting…"; newline_below_bar
   for entry in "${MAS_APPS[@]}"; do
-    current=$((current+1)); pct=$(( current * 100 / total ))
-    id=${entry%%:*}; name=${entry#*:}
+    current=$((current+1))
+    pct=$(( current * 100 / total ))
 
-    if [[ " ${INST_IDS[@]-} " == *" $id "* ]]; then
-      show_bar "$pct" "✓ already installed $name"; newline_below_bar; continue
+    id=${entry%%:*}
+    name=${entry#*:}
+
+    if [[ " ${INST_IDS[*]-} " == *" $id "* ]]; then
+      show_bar "$pct" "✓ already installed $name"; newline_below_bar
+      continue
     fi
 
-    show_bar "$pct" "↓ $name"; newline_below_bar
+    show_bar "$pct" "↓ installing $name"; newline_below_bar
     if mas install "$id"; then
-      show_bar "$pct" "✔︎ $name"; newline_below_bar
+      show_bar "$pct" "✔︎ installed $name"; newline_below_bar
     else
-      log_warning "failed: $name"
+      log_warning "Failed: $name"
     fi
   done
 
-  # attempt a bulk upgrade; ignore errors
   mas upgrade || true
+  log_success "Mac App Store installs complete."
 }
 
 ###############################################################################
-#  Installomator installs - for items that are not in brew
+#  Installomator – install/update + run labels
 ###############################################################################
-
 installomator_bootstrap() {
   local installomator_path="/usr/local/Installomator/Installomator.sh"
-  local pkg_url="https://github.com/Installomator/Installomator/releases/download/v10.8/Installomator-10.8.pkg"
+  local api_url="https://api.github.com/repos/Installomator/Installomator/releases/latest"
   local tmp_pkg="/tmp/Installomator.pkg"
+  local pkg_url=""
   
-  if [[ ! -x "$installomator_path" ]]; then
-    log_info "Installomator not found → downloading & installing…"
-  else
-    log_info "Installomator found → downloading & upgrading…"
-  fi
-  
-  # Download the pkg
-  curl -fsSL "$pkg_url" -o "$tmp_pkg" || {
-    log_info "Failed to download Installomator pkg."
-    return 1
-  }
-  
-  # Install the pkg
-  sudo installer -pkg "$tmp_pkg" -target / || {
-    log_info "Installomator pkg install failed."
-    rm -f "$tmp_pkg"
-    return 1
-  }
-  
-  # Cleanup
-  rm -f "$tmp_pkg"
-  
-  # Verify install
   if [[ -x "$installomator_path" ]]; then
-    log_info "Installomator installed successfully → $installomator_path"
+    log_info "Installomator found → upgrading to latest…"
   else
-    log_info "Installomator install completed, but Installomator.sh was not found at expected path."
-    return 1
+    log_info "Installomator not found → installing latest…"
   fi
-}
+  
+  # Fetch latest release JSON and extract the first .pkg download URL
+  pkg_url="$(curl -fsSL "$api_url" | python3 - <<'PY'
+import json, sys
+data = json.load(sys.stdin)
+assets = data.get("assets", [])
+for a in assets:
+    url = a.get("browser_download_url", "")
+    if url.endswith(".pkg"):
+        print(url)
+        break
+PY
+)"
+        
+        if [[ -z "$pkg_url" ]]; then
+          log_error "Could not determine latest Installomator .pkg URL from GitHub."
+          return 1
+        fi
+        
+        log_info "Latest Installomator pkg → $pkg_url"
+        
+        # Download the pkg
+        curl -fsSL "$pkg_url" -o "$tmp_pkg" || {
+          log_error "Failed to download Installomator pkg."
+          return 1
+        }
+        
+        # Install the pkg (requires admin)
+        sudo installer -pkg "$tmp_pkg" -target / || {
+          log_error "Installomator pkg install failed."
+          rm -f "$tmp_pkg"
+          return 1
+        }
+        
+        rm -f "$tmp_pkg"
+        
+        # Verify
+        if [[ -x "$installomator_path" ]]; then
+          log_success "Installomator installed successfully → $installomator_path"
+        else
+          log_error "Install completed, but Installomator.sh not found at expected path."
+          return 1
+        fi
+        }
 
 installomator_install_labels() {
   local installomator="/usr/local/Installomator/Installomator.sh"
   local default_flags=("DEBUG=0" "NOTIFY=silent")
-  
-  # Ensure Installomator exists
-  if [[ ! -x "$installomator" ]]; then
-    log_info "Installomator not found at $installomator → aborting."
-    return 1
-  fi
-  
-  # Ensure INSTALLOMATOR_APPS exists and has values
+
+  [[ -x "$installomator" ]] || { log_error "Installomator not found at $installomator"; return 1; }
+
   if [[ ${#INSTALLOMATOR_APPS[@]} -eq 0 ]]; then
-    log_info "INSTALLOMATOR_APPS is empty or not defined → nothing to install."
+    log_info "INSTALLOMATOR_APPS is empty → nothing to install."
     return 0
   fi
-  
-  # Ensure we are root (Installomator must run as root)
+
+  # Must run as root
   if [[ $EUID -ne 0 ]]; then
-    log_info "Not running as root → re-running with sudo…"
-    sudo bash -c "$(declare -p INSTALLOMATOR_APPS; declare -f log_info installomator_install_labels); installomator_install_labels"
+    log_info "Re-running Installomator installs as root…"
+    sudo bash -c "$(declare -p INSTALLOMATOR_APPS; declare -f log_info log_error log_success installomator_install_labels); installomator_install_labels"
     return $?
   fi
-  
-  # Move to Installomator directory so './Installomator.sh' matches your desired invocation
+
   cd "$(dirname "$installomator")" || return 1
-  
-  log_info "Running Installomator as root with default flags: ${default_flags[*]}"
-  log_info "Apps to install: ${INSTALLOMATOR_APPS[*]}"
-  
+
+  log_info "Running Installomator labels: ${INSTALLOMATOR_APPS[*]}"
   for label in "${INSTALLOMATOR_APPS[@]}"; do
     log_info "Installing: $label"
-    ./Installomator.sh "$label" "${default_flags[@]}" || {
-      log_info "❌ Install failed for label: $label"
-      return 1
-    }
-    log_info "✅ Installed: $label"
+    ./Installomator.sh "$label" "${default_flags[@]}" || { log_error "Install failed: $label"; return 1; }
+    log_success "Installed: $label"
   done
-  
-  log_info "All Installomator installs completed successfully."
+
+  log_success "Installomator installs complete."
 }
 
 ###############################################################################
-#  Setting the Dock
+#  Tart – install latest binary from GitHub (not via brew)
 ###############################################################################
+tart_bootstrap() {
+  local url="https://github.com/cirruslabs/tart/releases/latest/download/tart.tar.gz"
+  local tmp_dir tarball install_dir tart_bin
 
+  tmp_dir="$(mktemp -d)"
+  tarball="$tmp_dir/tart.tar.gz"
+
+  # Choose install dir
+  install_dir="/usr/local/bin"
+  [[ $(uname -m) == "arm64" && -d /opt/homebrew/bin ]] && install_dir="/opt/homebrew/bin"
+
+  if command -v tart &>/dev/null; then
+    log_info "tart found → updating to latest…"
+  else
+    log_info "tart not found → installing latest…"
+  fi
+
+  ( cd "$tmp_dir" && curl -LO "$url" ) || { log_error "Failed to download tart."; rm -rf "$tmp_dir"; return 1; }
+  tar -xzf "$tarball" -C "$tmp_dir" || { log_error "Failed to extract tart."; rm -rf "$tmp_dir"; return 1; }
+
+  tart_bin="$(find "$tmp_dir" -maxdepth 2 -type f -name tart 2>/dev/null | head -n 1 || true)"
+  [[ -n "$tart_bin" ]] || { log_error "Could not locate tart binary."; rm -rf "$tmp_dir"; return 1; }
+  chmod +x "$tart_bin"
+
+  log_info "Installing tart → $install_dir/tart"
+  if [[ -w "$install_dir" ]]; then
+    install -m 0755 "$tart_bin" "$install_dir/tart"
+  else
+    sudo install -m 0755 "$tart_bin" "$install_dir/tart"
+  fi
+
+  rm -rf "$tmp_dir"
+  command -v tart &>/dev/null || { log_error "tart install finished but tart not in PATH."; return 1; }
+  log_success "tart installed → $(command -v tart)"
+}
+
+###############################################################################
+#  Dock – configure Dock for the current console user using dockutil
+###############################################################################
 dock_setup() {
-  local console_user
+  local console_user user_home dockutil_bin
   console_user="$(stat -f%Su /dev/console)"
-  
-  local user_home
   user_home="$(dscl . -read /Users/"$console_user" NFSHomeDirectory 2>/dev/null | awk '{print $2}')"
-  
-  local dockutil_bin
   dockutil_bin="$(command -v dockutil 2>/dev/null || true)"
-  
-  # Sanity checks
-  if [[ -z "$dockutil_bin" ]]; then
-    log_info "dockutil not found in PATH → aborting."
-    return 1
-  fi
-  if [[ -z "$console_user" || "$console_user" == "root" ]]; then
-    log_info "No GUI user logged in → cannot set Dock."
-    return 1
-  fi
-  if [[ -z "$user_home" || ! -d "$user_home" ]]; then
-    log_info "Could not determine home directory for $console_user → aborting."
-    return 1
-  fi
+
+  [[ -n "$dockutil_bin" ]] || { log_error "dockutil not found in PATH."; return 1; }
+  [[ -n "$console_user" && "$console_user" != "root" ]] || { log_error "No GUI user logged in; cannot set Dock."; return 1; }
+  [[ -n "$user_home" && -d "$user_home" ]] || { log_error "Could not determine home directory for $console_user."; return 1; }
+
   if [[ ${#DOCK_APPS[@]} -eq 0 ]]; then
-    log_info "DOCK_APPS is empty or not defined → nothing to do."
+    log_info "DOCK_APPS empty → skipping Dock setup."
     return 0
   fi
-  
-  # If the function is re-run with sudo, we must preserve DOCK_APPS
-  if [[ $EUID -ne 0 ]]; then
-    log_info "Not running as root → re-running with sudo…"
-    sudo bash -c "$(declare -p DOCK_APPS; declare -f log_info dock_bootstrap_from_list); dock_bootstrap_from_list"
-    return $?
-  fi
-  
+
+  # Dock changes must run as the user, not root.
   log_info "Configuring Dock for user: $console_user"
-  log_info "Clearing existing Dock items…"
+  log_info "Clearing Dock…"
   sudo -u "$console_user" "$dockutil_bin" --remove all --no-restart "$user_home"
-  
+
+  local entry app_path app_name
   for entry in "${DOCK_APPS[@]}"; do
-    local app_path="${entry%%|*}"
-    local app_name="${entry#*|}"
-    
+    app_path="${entry%%|*}"
+    app_name="${entry#*|}"
+
     if [[ -d "$app_path" ]]; then
-      log_info "Adding: $app_name"
+      log_info "Adding to Dock: $app_name"
       sudo -u "$console_user" "$dockutil_bin" --add "$app_path" --no-restart "$user_home"
     else
-      log_info "⚠️ Skipping (not found): $app_name → $app_path"
+      log_warning "Missing app (skipped): $app_name → $app_path"
     fi
   done
 
-  sudo -u "$console_user" "$dockutil_bin" --add "$user_home"/Downloads --view grid --no-restart "$user_home"
-  
-  log_info "Restarting Dock to apply changes…"
+  # Add Downloads stack (optional)
+  sudo -u "$console_user" "$dockutil_bin" --add "$user_home/Downloads" --view grid --no-restart "$user_home"
+
   killall Dock >/dev/null 2>&1 || true
-  
-  log_info "Dock configured successfully."
+  log_success "Dock configured."
 }
 
 ###############################################################################
-#  Enabling touchID for sudo
+#  Touch ID for sudo – enable pam_tid for sudo authentication
 ###############################################################################
-
 sudo_touchid_bootstrap() {
   local pam_file="/etc/pam.d/sudo"
   local touchid_line="auth       sufficient     pam_tid.so"
-  
-  # Must run as root (self-elevate)
-  if [[ $EUID -ne 0 ]]; then
-    log_info "Not running as root → re-running with sudo…"
-    sudo bash -c "$(declare -f log_info sudo_touchid_bootstrap); sudo_touchid_bootstrap"
-    return $?
-  fi
-  
-  # Sanity check
-  if [[ ! -f "$pam_file" ]]; then
-    log_info "ERROR: $pam_file not found → aborting."
-    return 1
-  fi
-  
-  # If already present, no-op
-  if grep -qE '^\s*auth\s+sufficient\s+pam_tid\.so\s*$' "$pam_file"; then
-    log_info "Touch ID sudo PAM already enabled → nothing to do."
+
+  # No Touch ID hardware / PAM module? Skip gracefully.
+  if [[ ! -f /usr/lib/pam/pam_tid.so ]]; then
+    log_warning "Touch ID PAM module not found → skipping Touch ID for sudo."
     return 0
   fi
-  
-  # Backup
-  local backup="${pam_file}.bak.$(date +%Y%m%d%H%M%S)"
+
+  # Must run as root to edit /etc/pam.d/sudo
+  if [[ $EUID -ne 0 ]]; then
+    log_info "Enabling Touch ID for sudo (requires admin)…"
+    sudo bash -c "$(declare -f log_info log_warning log_error sudo_touchid_bootstrap); sudo_touchid_bootstrap"
+    return $?
+  fi
+
+  [[ -f "$pam_file" ]] || { log_error "PAM file not found: $pam_file"; return 1; }
+
+  if grep -qE '^\s*auth\s+sufficient\s+pam_tid\.so\s*$' "$pam_file"; then
+    log_info "Touch ID for sudo already enabled → nothing to do."
+    return 0
+  fi
+
+  local backup tmp
+  backup="${pam_file}.bak.$(date +%Y%m%d%H%M%S)"
   cp -p "$pam_file" "$backup"
   log_info "Backup created: $backup"
-  
-  log_info "Enabling Touch ID for sudo…"
-  
-  # Insert line after any leading comments/blank lines at top of file
-  local tmp
+
   tmp="$(mktemp)"
-  
   awk -v line="$touchid_line" '
     BEGIN { inserted=0 }
     {
       if (!inserted) {
-        if ($0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/) {
-          print $0
-          next
-        } else {
-          print line
-          inserted=1
-        }
+        if ($0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/) { print $0; next }
+        print line; inserted=1
       }
       print $0
     }
-    END {
-      if (!inserted) print line
-    }
+    END { if (!inserted) print line }
   ' "$pam_file" > "$tmp"
-  
-  # Replace the original file
+
   cp "$tmp" "$pam_file"
   rm -f "$tmp"
-  
-  log_info "Touch ID line added successfully."
-  
-  # Show top of file for quick verification
+
+  log_success "Touch ID for sudo enabled."
   log_info "Top of $pam_file now:"
   head -n 12 "$pam_file" | sed 's/^/  /'
-  
 }
 
-
 ###############################################################################
-#  Z-shell config (same as previous)
+#  Oh My Zsh – install/update + link iCloud-managed .zshrc
 ###############################################################################
 ohmyzsh_bootstrap() {
   local omz_dir="${ZSH:-$HOME/.oh-my-zsh}"
   local install_url="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
-  
+  local zshrc_icloud="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Documents/profiles/.zshrc"
+
   if [[ ! -d "$omz_dir" ]]; then
     log_info "Oh My Zsh not found → installing…"
-    
-    # Install without launching a new zsh shell afterwards
     RUNZSH=no CHSH=yes bash -c "$(curl -fsSL "$install_url")"
-    
   else
     log_info "Oh My Zsh found → updating…"
-    
-    # Update OMZ (works if installed normally)
     if command -v omz &>/dev/null; then
       omz update
+    elif command -v git &>/dev/null; then
+      git -C "$omz_dir" pull --rebase --autostash
     else
-      # Fallback: update via git directly
-      if command -v git &>/dev/null; then
-        git -C "$omz_dir" pull --rebase --autostash
-      else
-        log_info "git not found → cannot update Oh My Zsh automatically."
-      fi
+      log_warning "git not found → cannot update Oh My Zsh automatically."
     fi
   fi
-  
-  # create a sym link from iCloud zshrc to home folder path
-  ln -sf "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Documents/profiles/.zshrc" "$HOME/.zshrc"
-  source "$HOME/.zshrc"
+
+  # Symlink iCloud .zshrc into $HOME
+  if [[ -f "$zshrc_icloud" ]]; then
+    ln -sf "$zshrc_icloud" "$HOME/.zshrc"
+    log_success "Linked .zshrc → $zshrc_icloud"
+  else
+    log_warning "iCloud .zshrc not found → skipping symlink ($zshrc_icloud)"
+  fi
 }
 
 ###############################################################################
@@ -552,24 +584,24 @@ ohmyzsh_bootstrap() {
 ###############################################################################
 main() {
   welcome
-  newline_below_bar
-  brew_bootstrap
-  newline_below_bar
+
+  # Cache sudo auth early so subsequent sudo calls are smoother
+  log_info "Checking sudo access…"
+  sudo -v
+
+  sudo_touchid_bootstrap
   configure_system
-  newline_below_bar
-  log_info "Installing Homebrew apps…"; newline_below_bar
+  brew_bootstrap
   install_brew_items
-  newline_below_bar
-  log_info "Installing Mac App Store apps…"; newline_below_bar
   install_mas_items
-  newline_below_bar
-  log_info "Installing Installomator and installing labels and setting up the dock": newline_below_bar
+
   installomator_bootstrap
   installomator_install_labels
+  tart_bootstrap
+  
   dock_setup
-  log_info "Settign up TouchID for sudo and ohmyzsh": newline_below_bar
-  sudo_touchid_bootstrap
   ohmyzsh_bootstrap
+
   echo -e "\n${GREEN}${BOLD}✨  All done! Consider rebooting.${NC}"
 }
 
