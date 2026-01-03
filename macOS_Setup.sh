@@ -73,11 +73,6 @@ configure_system() {
   defaults write com.apple.dock mru-spaces -bool false               # Prevents macOS from automatically reordering Spaces based on most recent use
   
   ###
-  # Safari
-  ###
-  defaults write com.apple.Safari ShowFullURLInSmartSearchField -bool true   # Shows the full URL in Safari’s address bar (instead of truncating it)
-  
-  ###
   # Accessibility / UI
   ###
   defaults write com.apple.universalaccess showWindowTitlebarIcons -bool true # Shows icons in window title bars (where supported)
@@ -115,7 +110,7 @@ configure_system() {
 
   # https://dev.to/darrinndeal/setting-mac-hot-corners-in-the-terminal-3de
 
-  killall Dock Finder Safari SystemUIServer 2>/dev/null || true
+  killall Dock Finder SystemUIServer 2>/dev/null || true
   log_success "System Preferences applied"
 }
 
