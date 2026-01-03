@@ -199,7 +199,6 @@ INSTALLOMATOR_APPS=(
 
 # Dock items (path|label). Add Finder explicitly if you want it first.
 DOCK_APPS=(
-  "/System/Library/CoreServices/Finder.app|Finder"
   "/Applications/Microsoft Outlook.app|Microsoft Outlook"
   "/Applications/Daylite.app|Daylite"
   "/Applications/Slack.app|Slack"
