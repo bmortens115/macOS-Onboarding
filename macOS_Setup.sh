@@ -327,60 +327,57 @@ install_mas_items() {
 #  Installomator – install/update + run labels
 ###############################################################################
 installomator_bootstrap() {
-  local installomator_path="/usr/local/Installomator/Installomator.sh"
-  local api_url="https://api.github.com/repos/Installomator/Installomator/releases/latest"
-  local tmp_pkg="/tmp/Installomator.pkg"
-  local pkg_url=""
-  
-  if [[ -x "$installomator_path" ]]; then
-    log_info "Installomator found → upgrading to latest…"
-  else
-    log_info "Installomator not found → installing latest…"
-  fi
-  
-  # Fetch latest release JSON and extract the first .pkg download URL
-  pkg_url="$(curl -fsSL "$api_url" | python3 - <<'PY'
-import json, sys
-data = json.load(sys.stdin)
-assets = data.get("assets", [])
-for a in assets:
-    url = a.get("browser_download_url", "")
-    if url.endswith(".pkg"):
-        print(url)
-        break
-PY
-)"
-        
-        if [[ -z "$pkg_url" ]]; then
-          log_error "Could not determine latest Installomator .pkg URL from GitHub."
-          return 1
-        fi
-        
-        log_info "Latest Installomator pkg → $pkg_url"
-        
-        # Download the pkg
-        curl -fsSL "$pkg_url" -o "$tmp_pkg" || {
-          log_error "Failed to download Installomator pkg."
-          return 1
-        }
-        
-        # Install the pkg (requires admin)
-        sudo installer -pkg "$tmp_pkg" -target / || {
-          log_error "Installomator pkg install failed."
-          rm -f "$tmp_pkg"
-          return 1
-        }
-        
-        rm -f "$tmp_pkg"
-        
-        # Verify
-        if [[ -x "$installomator_path" ]]; then
-          log_success "Installomator installed successfully → $installomator_path"
-        else
-          log_error "Install completed, but Installomator.sh not found at expected path."
-          return 1
-        fi
-        }
+	local installomator_path="/usr/local/Installomator/Installomator.sh"
+	local tmp_pkg="/tmp/Installomator.pkg"
+	
+	if [[ -x "$installomator_path" ]]; then
+		log_info "Installomator found → upgrading to latest…"
+	else
+		log_info "Installomator not found → installing latest…"
+	fi
+	
+	# Resolve the latest tag via redirect:
+	# https://github.com/Installomator/Installomator/releases/latest
+	# → https://github.com/Installomator/Installomator/releases/tag/v10.8
+	local final_url tag version pkg_url
+	final_url="$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
+		"https://github.com/Installomator/Installomator/releases/latest" 2>/dev/null || true)"
+	
+	tag="${final_url##*/}"     # e.g. v10.8
+	version="${tag#v}"         # e.g. 10.8
+	
+	if [[ -z "$tag" || -z "$version" || "$tag" == "$final_url" ]]; then
+		log_error "Could not determine latest Installomator release tag."
+		log_error "Resolved URL: ${final_url:-<empty>}"
+		return 1
+	fi
+	
+	pkg_url="https://github.com/Installomator/Installomator/releases/download/${tag}/Installomator-${version}.pkg"
+	log_info "Latest Installomator pkg → $pkg_url"
+	
+	# Download the pkg
+	curl -fL --retry 3 --retry-delay 1 -o "$tmp_pkg" "$pkg_url" || {
+		log_error "Failed to download Installomator pkg."
+		return 1
+	}
+	
+	# Install the pkg
+	sudo installer -pkg "$tmp_pkg" -target / || {
+		log_error "Installomator pkg install failed."
+		rm -f "$tmp_pkg"
+		return 1
+	}
+	
+	rm -f "$tmp_pkg"
+	
+	# Verify install
+	if [[ -x "$installomator_path" ]]; then
+		log_success "Installomator installed successfully → $installomator_path"
+	else
+		log_error "Install completed, but Installomator.sh not found at expected path."
+		return 1
+	fi
+}
 
 installomator_install_labels() {
   local installomator="/usr/local/Installomator/Installomator.sh"
