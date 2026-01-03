@@ -135,26 +135,26 @@ Before running:
 
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/bmortens115/macOS-Onboarding/main/macOS_Setup.sh)" ```
-
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/bmortens115/macOS-Onboarding/main/macOS_Setup.sh)"
+```
 ---
 
 ### Option B — Download, Review, Then Run (Safer)
-
+```bash
     curl -fsSL https://raw.githubusercontent.com/<YOUR_USER>/<YOUR_REPO>/main/macOS_Setup.sh -o macOS_Setup.sh
     less macOS_Setup.sh
     chmod +x macOS_Setup.sh
     ./macOS_Setup.sh
-
+```
 ---
 
 ### Option C — Clone Repo and Run
-
+```bash
     git clone https://github.com/<YOUR_USER>/<YOUR_REPO>.git
     cd <YOUR_REPO>
     chmod +x macOS_Setup.sh
     ./macOS_Setup.sh
-
+```
 ---
 
 ## Customization
