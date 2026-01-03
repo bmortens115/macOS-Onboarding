@@ -132,10 +132,10 @@ Before running:
 
 ### Option A — Run Directly from GitHub (Recommended)
 
- `curl`:
+
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/bmortens115/macOS-Onboarding/main/macOS_Setup.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/bmortens115/macOS-Onboarding/main/macOS_Setup.sh)" ```
 
 ---
 
