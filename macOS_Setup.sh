@@ -73,11 +73,6 @@ configure_system() {
   defaults write com.apple.dock mru-spaces -bool false               # Prevents macOS from automatically reordering Spaces based on most recent use
   
   ###
-  # Accessibility / UI
-  ###
-  defaults write com.apple.universalaccess showWindowTitlebarIcons -bool true # Shows icons in window title bars (where supported)
-  
-  ###
   # Finder
   ###
   defaults write com.apple.finder ShowPathbar -bool true              # Shows the path bar at the bottom of Finder windows
