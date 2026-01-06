@@ -155,6 +155,7 @@ APPS=(
   "sf-symbols:cask"
   "visual-studio-code:cask"
   "windows-app:cask"
+  "rectangle:cask"
 
   # --- Formulae ---
   "autoconf:formula"
