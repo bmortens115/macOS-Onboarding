@@ -175,6 +175,7 @@ APPS=(
   "xmlstarlet:formula"
   "mas:formula"
   "dockutil:formula"
+  "gh:formula"
 )
 
 MAS_APPS=(
