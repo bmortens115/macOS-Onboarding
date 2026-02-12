@@ -156,6 +156,7 @@ APPS=(
   "visual-studio-code:cask"
   "windows-app:cask"
   "rectangle:cask"
+  "lm-studio:cask"
 
   # --- Formulae ---
   "autoconf:formula"
